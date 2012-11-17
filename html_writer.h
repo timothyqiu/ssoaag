@@ -9,7 +9,7 @@ class HTMLWriter
 {
 public:
     HTMLWriter();
-    ~HTMLWriter();
+    virtual ~HTMLWriter();
 
     bool WriteFile(std::string const& filename);
 
@@ -39,7 +39,7 @@ private:
 class ImageWriter : public HTMLWriter
 {
 public:
-    ImageWriter(std::string const& filename);
+    explicit ImageWriter(std::string const& filename);
 
     virtual void WriteStyle();
     virtual void WriteContent();
