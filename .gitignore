@@ -1,4 +1,6 @@
 *.o
 *.obj
+*.htm
+*.html
 ssoaag
 ssoaag.exe
