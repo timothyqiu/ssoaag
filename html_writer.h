@@ -53,9 +53,15 @@ protected:
 class AsciiArtWriter : public ImageWriter
 {
 public:
-    AsciiArtWriter(std::string const& filename);
+    static std::string const s_default_characters_;
+    
+    explicit AsciiArtWriter(std::string const& filename,
+                            std::string const& characters = s_default_characters_);
 
     virtual void WritePixel(Color color);
+
+private:
+    std::string characters_;
 };
 
 #endif // HTML_WRITER_H_

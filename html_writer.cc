@@ -1,6 +1,7 @@
 #include "html_writer.h"
 #include <stdio.h>
 
+std::string const AsciiArtWriter::s_default_characters_ = "@O1ir:. ";
 
 // HTMLWriter
 // ------------------------------------
@@ -117,8 +118,9 @@ void ImageWriter::WritePixel(Color color)
 // AsciiArtWriter
 // ------------------------------------
 
-AsciiArtWriter::AsciiArtWriter(std::string const& filename)
-    : ImageWriter(filename)
+AsciiArtWriter::AsciiArtWriter(std::string const& filename,
+                               std::string const& characters)
+    : ImageWriter(filename), characters_(characters)
 {
     this->SetTitle("Image to Ascii Art: " + this->filename_);
 }
@@ -127,13 +129,12 @@ void AsciiArtWriter::WritePixel(Color color)
 {
     uint8_t grey = (Bitmap::GetR(color) + Bitmap::GetG(color) + Bitmap::GetB(color)) / 3;
 
-    static std::string const s = "@O1ir:. ";
 
-    auto span = 0xFF / s.length();
+    auto span = 0xFF / this->characters_.length();
     auto cidx = grey / span;
-    if (cidx == s.length())
+    if (cidx == this->characters_.length())
         cidx = cidx - 1;
 
-    fprintf(this->file_, "%s", Escape(s.substr(cidx, 1)).c_str());
+    fprintf(this->file_, "%s", Escape(this->characters_.substr(cidx, 1)).c_str());
 }
 

@@ -6,6 +6,9 @@ OBJS := main.o html_writer.o bitmap.o
 $(BIN): $(OBJS)
 	$(CXX) -o $@ $^ $(LDLIBS)
 
+main.o: main.cc html_writer.h
+	$(CXX) -c $(CXXFLAGS) -o $@ $<
+
 bitmap.o: bitmap.cc bitmap.h
 	$(CXX) -c $(CXXFLAGS) -o $@ $<
 
