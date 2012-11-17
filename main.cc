@@ -1,7 +1,9 @@
 #include "html_writer.h"
 #include <stdio.h>
 
-#define DEFAULT_IMAGE ("test-image.bmp")
+#define DEFAULT_IMAGE   ("test-image.bmp")
+#define MOSAIC_OUTPUT   ("mosaic.html")
+#define ASCII_OUTPUT    ("ascii.html")
 
 int main(int argc, char *argv[])
 {
@@ -17,9 +19,9 @@ int main(int argc, char *argv[])
     }
 
     ImageWriter    image_writer(filename);
-    AsciiArtWriter ascii_writer(filename);
+    image_writer.WriteFile(MOSAIC_OUTPUT);
 
-    image_writer.WriteFile("mosaic.html");
-    ascii_writer.WriteFile("ascii.html");
+    AsciiArtWriter ascii_writer(filename);
+    ascii_writer.WriteFile(ASCII_OUTPUT);
 }
 
