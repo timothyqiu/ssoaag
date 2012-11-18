@@ -1,7 +1,7 @@
 #include "html_writer.h"
 #include <stdio.h>
 
-#define DEFAULT_IMAGE   ("sample-24bit.bmp")
+#define DEFAULT_IMAGE   ("data/sample-24bit.bmp")
 #define MOSAIC_OUTPUT   ("mosaic.html")
 #define ASCII_OUTPUT    ("ascii.html")
 
