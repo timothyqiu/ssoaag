@@ -58,6 +58,7 @@ public:
     explicit AsciiArtWriter(std::string const& filename,
                             std::string const& characters = s_default_characters_);
 
+    virtual void WriteStyle();
     virtual void WritePixel(Color color);
 
 private:

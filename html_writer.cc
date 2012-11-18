@@ -83,7 +83,8 @@ ImageWriter::ImageWriter(std::string const& filename)
 void ImageWriter::WriteStyle()
 {
     fprintf(this->file_, "%s\n", "<style type=\"text/css\">");
-    fprintf(this->file_, "%s\n", "body{margin:0;padding:0;font-size:6px;line-height:6px;letter-spacing:0px;font-family:monospace;}");
+    fprintf(this->file_, "%s\n", "*{margin:0;padding:0;line-height:5px;}");
+    fprintf(this->file_, "%s\n", ".pixel{width:5px;height:5px;float:left;}");
     fprintf(this->file_, "%s\n", "</style>");
 }
 
@@ -112,9 +113,8 @@ void ImageWriter::WriteContent()
 
 void ImageWriter::WritePixel(Color color)
 {
-    fprintf(this->file_, "<span style=\"color:#%06x\">", color & 0xFFFFFF);
-    fprintf(this->file_, "%s", "■");
-    fprintf(this->file_, "</span>");
+    fprintf(this->file_, "<div class=\"pixel\" style=\"background-color:#%06x\">", color & 0xFFFFFF);
+    fprintf(this->file_, "</div>");
 }
 
 // AsciiArtWriter
@@ -125,6 +125,13 @@ AsciiArtWriter::AsciiArtWriter(std::string const& filename,
     : ImageWriter(filename), characters_(characters)
 {
     this->SetTitle("Image to Ascii Art: " + this->filename_);
+}
+
+void AsciiArtWriter::WriteStyle()
+{
+    fprintf(this->file_, "%s\n", "<style type=\"text/css\">");
+    fprintf(this->file_, "%s\n", "body{margin:0;padding:0;font-size:6px;line-height:6px;letter-spacing:0px;font-family:monospace;}");
+    fprintf(this->file_, "%s\n", "</style>");
 }
 
 void AsciiArtWriter::WritePixel(Color color)
