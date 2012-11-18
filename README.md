@@ -1,4 +1,4 @@
-Some Sort Of Ascii Art Generator...
+# Some Sort Of Ascii Art Generator...
 
 There are two classes in `main.cc`, both can convert a bitmap to a web page:
 
@@ -18,7 +18,7 @@ This project requries C++11 support. ;)
 
 ---
 
-某种字符画生成器（？）
+# 某种字符画生成器（？）
 
 `main.cc` 中草草定义了两个有用的类，都会将位图转换为对应网页：
 
