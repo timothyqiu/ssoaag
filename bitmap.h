@@ -6,8 +6,9 @@
 
 /*
  * Bitmap
- * uncompressed 256colors/24bpp/32bpp bitmap (works on little-endian machine)
- * no alpha channel support
+ * uncompressed 256colors/16bpp/24bpp/32bpp bitmap
+ * ignores any alpha channel
+ * (little-endian machine only ?)
  */
 
 typedef uint32_t Color; // 0xAARRGGBB format
@@ -46,7 +47,7 @@ public:
     }
 
 private:
-    bool LoadData(char const *data);
+    bool LoadData(char const *data, size_t size);
 
     int32_t width_;
     int32_t height_;

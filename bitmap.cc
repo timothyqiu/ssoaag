@@ -102,7 +102,7 @@ bool Bitmap::Load(std::string const& filename)
 
     file.close();
 
-    return this->LoadData(buffer.data());
+    return this->LoadData(buffer.data(), length);
 }
 
 void Bitmap::Free()
@@ -116,10 +116,31 @@ void Bitmap::Free()
     }
 }
 
-bool Bitmap::LoadData(char const *data)
+static bool IsBitmap(char const *data, size_t size)
 {
+    if (size < 2)
+        return false;
+
+    // header field signatures
+    // http://en.wikipedia.org/wiki/BMP_file_format#Bitmap_file_header
+    return (memcmp(data, "BM", 2) == 0 ||   // Windows 3.1x, 95, NT, ... etc.
+            memcmp(data, "BA", 2) == 0 ||   // OS/2 struct Bitmap Array
+            memcmp(data, "CI", 2) == 0 ||   // OS/2 struct Color Icon
+            memcmp(data, "CP", 2) == 0 ||   // OS/2 const Color Pointer
+            memcmp(data, "IC", 2) == 0 ||   // OS/2 struct Icon
+            memcmp(data, "PT", 2) == 0);    // OS/2 Pointer
+}
+
+bool Bitmap::LoadData(char const *data, size_t size)
+{
+    if (!IsBitmap(data, size))
+        return false;   // wrong signature
+
     auto *bf = reinterpret_cast<BITMAPFILEHEADER const *>(data);
     auto *bi = reinterpret_cast<BITMAPINFOHEADER const *>(bf + 1);
+
+    if (bf->bfSize != size)
+        return false;   // seems impossible
 
     int w = this->width_  = abs(bi->biWidth );
     int h = this->height_ = abs(bi->biHeight);
@@ -169,6 +190,26 @@ bool Bitmap::LoadData(char const *data)
                 uint8_t b = color[0];
                 uint8_t g = color[1];
                 uint8_t r = color[2];
+
+                *pixel_w = Bitmap::MakeColor(0xFF, r, g, b);
+            }
+        }
+        break;
+
+    case 16:    // 1555 for uncompressed. ignore any alpha channel(bit)
+        for (int y = 0; y < h; y++) {
+            auto *line_r = raw + row_size * y;
+            auto *line_w = this->pixels_ + w * (flip_y ? y : (h - 1 - y));
+            for (int x = 0; x < w; x++) {
+                auto *pixel_r = line_r + x * bi->biBitCount / 8;
+                auto *pixel_w = line_w + (flip_x ? w - 1 - x : x);
+
+                auto *color = pixel_r;
+
+                // TODO: fix the ugly code :(
+                uint8_t b = (((color[0] & 0x1F) << 0)                         ) * 255 / 31;
+                uint8_t g = (((color[1] & 0x03) << 3) | (color[0] >> 5 & 0x07)) * 255 / 31;
+                uint8_t r = (                           (color[1] >> 2 & 0x1F)) * 255 / 31;
 
                 *pixel_w = Bitmap::MakeColor(0xFF, r, g, b);
             }
