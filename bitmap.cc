@@ -40,6 +40,8 @@ struct BITMAPINFOHEADER {
 
 // Compression (bytes #30-33)
 #define BI_RGB      (0) // uncompressed
+#define BI_RLE8     (1) // RLE 8-bit/pixel
+#define BI_RLE4     (2) // RLE 4-bit/pixel
 
 
 Bitmap::Bitmap()
@@ -116,12 +118,11 @@ void Bitmap::Free()
     }
 }
 
-static bool IsBitmap(char const *data, size_t size)
+static bool HasBitmapSignature(char const *data, size_t size)
 {
     if (size < 2)
         return false;
 
-    // header field signatures
     // http://en.wikipedia.org/wiki/BMP_file_format#Bitmap_file_header
     return (memcmp(data, "BM", 2) == 0 ||   // Windows 3.1x, 95, NT, ... etc.
             memcmp(data, "BA", 2) == 0 ||   // OS/2 struct Bitmap Array
@@ -131,16 +132,44 @@ static bool IsBitmap(char const *data, size_t size)
             memcmp(data, "PT", 2) == 0);    // OS/2 Pointer
 }
 
+static bool IsBitmap(char const *data, size_t size)
+{
+    // header field signatures
+    if (!HasBitmapSignature(data, size))
+        return false;
+
+    // there must be a file header
+    if (size < sizeof(BITMAPFILEHEADER))
+        return false;
+
+    auto *bf = reinterpret_cast<BITMAPFILEHEADER const *>(data);
+
+    // total file size
+    if (bf->bfSize != size)
+        return false;
+
+    auto *bi = reinterpret_cast<BITMAPINFOHEADER const *>(bf + 1);
+
+    // number of planes must be one
+    if (bi->biPlanes != 1)
+        return false;
+
+    // some compression method requires bits per pixel to be a specific value
+    if (bi->biCompression == BI_RLE8 && bi->biBitCount != 8)
+        return false;
+    if (bi->biCompression == BI_RLE4 && bi->biBitCount != 4)
+        return false;
+
+    return true;
+}
+
 bool Bitmap::LoadData(char const *data, size_t size)
 {
     if (!IsBitmap(data, size))
-        return false;   // wrong signature
+        return false;
 
     auto *bf = reinterpret_cast<BITMAPFILEHEADER const *>(data);
     auto *bi = reinterpret_cast<BITMAPINFOHEADER const *>(bf + 1);
-
-    if (bf->bfSize != size)
-        return false;   // seems impossible
 
     int w = this->width_  = abs(bi->biWidth );
     int h = this->height_ = abs(bi->biHeight);
