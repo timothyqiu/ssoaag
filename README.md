@@ -8,7 +8,7 @@ There are two classes in `main.cc`, both can convert a bitmap to a web page:
 Currently, it can load bitmaps whose format is:
 
 * Uncompressed
-* 256 colors / 16bpp / 24bpp / 32bpp
+* 1bpp(monochrome) / 4bpp / 8bpp(256 colors) / 16bpp / 24bpp / 32bpp
 
 and any alpha channel will be ignored :(
 
@@ -28,7 +28,7 @@ This project requries C++11 support. ;)
 目前能够读取的位图格式只能是：
 
 * 未压缩
-* 256色/16位色/24位色/32位色
+* 1位色（黑白） / 4位色 / 8位色（256色） / 16位色 / 24位色 / 32位色
 
 而且无视透明度 :(
 

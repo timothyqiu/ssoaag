@@ -163,10 +163,9 @@ bool Bitmap::LoadData(char const *data, size_t size)
      * BI_RGB Pixel Format (R.G.B.A.X)
      *
      *        before V3  after V3
+     * 16bpp  5.5.5.0.0  5.5.5.[0-1].[0-1]
      * 24bpp  8.8.8.0.0  8.8.8.0.0
      * 32bpp  8.8.8.0.0  8.8.8.[0-8].[0-8]
-     *
-     * so, 8.8.8 since currently we dont't consider alpha channel
      */
 
     // bitmap pixel data
@@ -177,21 +176,28 @@ bool Bitmap::LoadData(char const *data, size_t size)
 
     // TODO: find a way to remove the switch..case
     switch (bi->biBitCount) {
-    case 8:
-        for (int y = 0; y < h; y++) {
-            auto *line_r = raw + row_size * y;
-            auto *line_w = this->pixels_ + w * (flip_y ? y : (h - 1 - y));
-            for (int x = 0; x < w; x++) {
-                auto *pixel_r = line_r + x * bi->biBitCount / 8;
-                auto *pixel_w = line_w + (flip_x ? w - 1 - x : x);
+    case 1: case 4: case 8: // these are all paletted image
+        {
+            auto ppb = 8 / bi->biBitCount;  // pixel per byte
+            for (int y = 0; y < h; y++) {
+                auto *line_r = raw + row_size * y;
+                auto *line_w = this->pixels_ + w * (flip_y ? y : (h - 1 - y));
+                for (int x = 0; x < w; x++) {
+                    auto *pixel_r = line_r + x / ppb;
+                    auto *pixel_w = line_w + (flip_x ? w - 1 - x : x);
 
-                auto *color = reinterpret_cast<uint8_t const *>(palette + *(pixel_r));
+                    // TODO: make the point clearer?
+                    uint8_t mask = ((1 << bi->biBitCount) - 1);
+                    auto shift = (ppb - 1 - (x % ppb)) * bi->biBitCount;
+                    auto index = ((*pixel_r) >> shift) & mask;
+                    auto *color = reinterpret_cast<uint8_t const *>(palette + index);
 
-                uint8_t b = color[0];
-                uint8_t g = color[1];
-                uint8_t r = color[2];
+                    uint8_t b = color[0];
+                    uint8_t g = color[1];
+                    uint8_t r = color[2];
 
-                *pixel_w = Bitmap::MakeColor(0xFF, r, g, b);
+                    *pixel_w = Bitmap::MakeColor(0xFF, r, g, b);
+                }
             }
         }
         break;

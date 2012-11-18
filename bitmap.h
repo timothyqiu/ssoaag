@@ -6,7 +6,7 @@
 
 /*
  * Bitmap
- * uncompressed 256colors/16bpp/24bpp/32bpp bitmap
+ * uncompressed 1bpp/4bpp/8bpp/16bpp/24bpp/32bpp bitmap
  * ignores any alpha channel
  * (little-endian machine only ?)
  */
