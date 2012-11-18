@@ -129,12 +129,14 @@ void AsciiArtWriter::WritePixel(Color color)
 {
     uint8_t grey = (Bitmap::GetR(color) + Bitmap::GetG(color) + Bitmap::GetB(color)) / 3;
 
+    auto char_count = this->characters_.length();
+    if (char_count != 0) {
+        auto span = 0xFF / char_count;
+        auto cidx = grey / span;
+        if (cidx == char_count)
+            cidx = cidx - 1;
 
-    auto span = 0xFF / this->characters_.length();
-    auto cidx = grey / span;
-    if (cidx == this->characters_.length())
-        cidx = cidx - 1;
-
-    fprintf(this->file_, "%s", Escape(this->characters_.substr(cidx, 1)).c_str());
+        fprintf(this->file_, "%s", Escape(this->characters_.substr(cidx, 1)).c_str());
+    }
 }
 
