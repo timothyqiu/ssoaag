@@ -103,7 +103,9 @@ void ImageWriter::WriteContent()
             fprintf(this->file_, "%s\n", "<br />");
         }
     } else {
-        fprintf(this->file_, "Failed open bitmap %s\n", this->filename_.c_str());
+        fprintf(this->file_, "<p>Failed open %s: %s</p>",
+                             this->filename_.c_str(),
+                             bitmap.GetError().c_str());
     }
     fprintf(this->file_, "%s\n", "</div>");
 }

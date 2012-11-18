@@ -35,6 +35,8 @@ public:
     int32_t GetWidth()  const { return width_;  }
     int32_t GetHeight() const { return height_; }
 
+    std::string const& GetError() const { return error_; }
+
     static uint8_t GetR(Color c) { return (c >> 16) & 0xFF; }
     static uint8_t GetG(Color c) { return (c >>  8) & 0xFF; }
     static uint8_t GetB(Color c) { return (c >>  0) & 0xFF; }
@@ -53,6 +55,8 @@ private:
     int32_t height_;
 
     Color *pixels_;
+
+    std::string error_;
 };
 
 #endif // BITMAP_H_

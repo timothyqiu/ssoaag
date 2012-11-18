@@ -1,7 +1,8 @@
 #include "bitmap.h"
+#include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fstream>
 #include <vector>
 
 #pragma pack (push)
@@ -34,6 +35,14 @@ struct BITMAPINFOHEADER {
      int32_t biYPelsPerMeter;   // vertical resolution. pixel per meter
     uint32_t biClrUsed;         // number of colors in the color palette, 0=2n
     uint32_t biClrImportant;    // number of important colors, 0=every
+};
+
+struct BITMAPCOREHEADER {
+    uint32_t bcSize;        // the size of this header (12 bytes)
+    uint16_t bcWidth;       // the bitmap width in pixels
+    uint16_t bcHeight;      // the bitmap height in pixels
+    uint16_t bcPlanes;      // the number of color planes (1)
+    uint16_t bcBitCount;    // the number of bits per pixels (1/4/8/24)
 };
 
 #pragma pack (pop)
@@ -81,28 +90,29 @@ Bitmap& Bitmap::operator=(Bitmap const& rhs)
     return *this;
 }
 
-// TODO: find a way to tell user why we failed the loading process
 bool Bitmap::Load(std::string const& filename)
 {
     this->Free();
 
-    std::ifstream file(filename, std::ios::binary | std::ios::in);
-
-    if (file.fail())
+    FILE *file = fopen(filename.c_str(), "rb");
+    if (file == NULL) {
+        this->error_ = strerror(errno);
         return false;
+    }
 
-    file.seekg(0, std::ios::end);
-    int length = file.tellg();
-    file.seekg(0, std::ios::beg);
+    fseek(file, 0, SEEK_END);
+    auto length = ftell(file);
+    fseek(file, 0, SEEK_SET);
 
     std::vector<char> buffer;
 
     buffer.resize(length);
-    file.read(buffer.data(), length);
-    if (!file.good())
+    if (fread(buffer.data(), length, 1, file) != 1) {
+        this->error_ = "Read error";
         return false;
+    }
 
-    file.close();
+    fclose(file);
 
     return this->LoadData(buffer.data(), length);
 }
@@ -116,6 +126,8 @@ void Bitmap::Free()
         delete[] this->pixels_;
         this->pixels_ = nullptr;
     }
+
+    this->error_.clear();
 }
 
 static bool HasBitmapSignature(char const *data, size_t size)
@@ -149,24 +161,35 @@ static bool IsBitmap(char const *data, size_t size)
         return false;
 
     auto *bi = reinterpret_cast<BITMAPINFOHEADER const *>(bf + 1);
+    auto *bc = reinterpret_cast<BITMAPCOREHEADER const *>(bf + 1);
 
-    // number of planes must be one
-    if (bi->biPlanes != 1)
-        return false;
+    if (bc->bcSize == sizeof(BITMAPCOREHEADER)) {
+        // number of planes must be one
+        if (bc->bcPlanes != 1)
+            return false;
 
-    // some compression method requires bits per pixel to be a specific value
-    if (bi->biCompression == BI_RLE8 && bi->biBitCount != 8)
-        return false;
-    if (bi->biCompression == BI_RLE4 && bi->biBitCount != 4)
-        return false;
+    } else {
+
+        // number of planes must be one
+        if (bi->biPlanes != 1)
+            return false;
+
+        // some compression method requires bits per pixel to be a specific value
+        if (bi->biCompression == BI_RLE8 && bi->biBitCount != 8)
+            return false;
+        if (bi->biCompression == BI_RLE4 && bi->biBitCount != 4)
+            return false;
+    }
 
     return true;
 }
 
 bool Bitmap::LoadData(char const *data, size_t size)
 {
-    if (!IsBitmap(data, size))
+    if (!IsBitmap(data, size)) {
+        this->error_ = "Invalid bitmap";
         return false;
+    }
 
     auto *bf = reinterpret_cast<BITMAPFILEHEADER const *>(data);
     auto *bi = reinterpret_cast<BITMAPINFOHEADER const *>(bf + 1);
@@ -179,11 +202,15 @@ bool Bitmap::LoadData(char const *data, size_t size)
 
     this->pixels_ = new Color[w * h];
 
-    if (bi->biSize < sizeof(BITMAPINFOHEADER))
+    if (bi->biSize < sizeof(BITMAPINFOHEADER)) {
+        this->error_ = "DIB header type not supported";
         return false;   // mainly means no BITMAPCOREHEADER support
+    }
 
-    if (bi->biCompression != BI_RGB)
+    if (bi->biCompression != BI_RGB) {
+        this->error_ = "Compressed format not supported";
         return false;   // unsupported
+    }
 
     // for BI_RGB, color table is immediately after the info header
     auto *palette = reinterpret_cast<uint32_t const *>(data + sizeof(BITMAPFILEHEADER) + bi->biSize);
@@ -272,6 +299,7 @@ bool Bitmap::LoadData(char const *data, size_t size)
         break;
 
     default:
+        this->error_ = "Bit depth not supported";
         return false;
     }
 
