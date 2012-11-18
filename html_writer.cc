@@ -85,6 +85,7 @@ void ImageWriter::WriteStyle()
     fprintf(this->file_, "%s\n", "<style type=\"text/css\">");
     fprintf(this->file_, "%s\n", "*{margin:0;padding:0;line-height:5px;}");
     fprintf(this->file_, "%s\n", ".pixel{width:5px;height:5px;float:left;}");
+    fprintf(this->file_, "%s\n", "br{clear:left;}");
     fprintf(this->file_, "%s\n", "</style>");
 }
 
