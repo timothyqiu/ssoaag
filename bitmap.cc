@@ -55,17 +55,20 @@ struct BITMAPCOREHEADER {
 
 Bitmap::Bitmap()
     : width_(0), height_(0), pixels_(nullptr)
+    , error_type_(kSuccess)
 {
 }
 
 Bitmap::Bitmap(Bitmap const& other)
     : width_(0), height_(0), pixels_(nullptr)
+    , error_type_(kSuccess)
 {
     this->operator=(other);
 }
 
 Bitmap::Bitmap(Bitmap&& other)
     : width_(other.width_), height_(other.height_), pixels_(other.pixels_)
+    , error_type_(kSuccess)
 {
     other.width_  = 0;
     other.height_ = 0;
@@ -96,7 +99,8 @@ bool Bitmap::Load(std::string const& filename)
 
     FILE *file = fopen(filename.c_str(), "rb");
     if (file == NULL) {
-        this->error_ = strerror(errno);
+        this->error_type_ = kIOError;
+        this->error_description_ = strerror(errno);
         return false;
     }
 
@@ -108,7 +112,8 @@ bool Bitmap::Load(std::string const& filename)
 
     buffer.resize(length);
     if (fread(buffer.data(), length, 1, file) != 1) {
-        this->error_ = "Read error";
+        this->error_type_ = kIOError;
+        this->error_description_ = "Failed reading data";
         return false;
     }
 
@@ -127,7 +132,8 @@ void Bitmap::Free()
         this->pixels_ = nullptr;
     }
 
-    this->error_.clear();
+    this->error_type_ = kSuccess;
+    this->error_description_.clear();
 }
 
 static bool HasBitmapSignature(char const *data, size_t size)
@@ -144,41 +150,55 @@ static bool HasBitmapSignature(char const *data, size_t size)
             memcmp(data, "PT", 2) == 0);    // OS/2 Pointer
 }
 
-static bool IsBitmap(char const *data, size_t size)
+bool Bitmap::CheckFormat(char const *data, size_t size)
 {
     // header field signatures
-    if (!HasBitmapSignature(data, size))
+    if (!HasBitmapSignature(data, size)) {
+        this->error_description_ = "No bitmap signature";
         return false;
+    }
 
     // there must be a file header
-    if (size < sizeof(BITMAPFILEHEADER))
+    if (size < sizeof(BITMAPFILEHEADER)) {
+        this->error_description_ = "File size too small";
         return false;
+    }
 
     auto *bf = reinterpret_cast<BITMAPFILEHEADER const *>(data);
 
     // total file size
-    if (bf->bfSize != size)
+    if (bf->bfSize != size) {
+        this->error_description_ = "File size and data length do not match";
         return false;
+    }
 
     auto *bi = reinterpret_cast<BITMAPINFOHEADER const *>(bf + 1);
     auto *bc = reinterpret_cast<BITMAPCOREHEADER const *>(bf + 1);
 
     if (bc->bcSize == sizeof(BITMAPCOREHEADER)) {
         // number of planes must be one
-        if (bc->bcPlanes != 1)
+        if (bc->bcPlanes != 1) {
+            this->error_description_ = "Number of planes not 1";
             return false;
+        }
 
     } else {
 
         // number of planes must be one
-        if (bi->biPlanes != 1)
+        if (bi->biPlanes != 1) {
+            this->error_description_ = "Number of planes not 1";
             return false;
+        }
 
         // some compression method requires bits per pixel to be a specific value
-        if (bi->biCompression == BI_RLE8 && bi->biBitCount != 8)
+        if (bi->biCompression == BI_RLE8 && bi->biBitCount != 8) {
+            this->error_description_ = "Wrong color depth for RLE 8 compression";
             return false;
-        if (bi->biCompression == BI_RLE4 && bi->biBitCount != 4)
+        }
+        if (bi->biCompression == BI_RLE4 && bi->biBitCount != 4) {
+            this->error_description_ = "Wrong color depth for RLE 4 compression";
             return false;
+        }
     }
 
     return true;
@@ -186,8 +206,8 @@ static bool IsBitmap(char const *data, size_t size)
 
 bool Bitmap::LoadData(char const *data, size_t size)
 {
-    if (!IsBitmap(data, size)) {
-        this->error_ = "Invalid bitmap";
+    if (!CheckFormat(data, size)) {
+        this->error_type_ = kInvalidBitmap;
         return false;
     }
 
@@ -203,12 +223,14 @@ bool Bitmap::LoadData(char const *data, size_t size)
     this->pixels_ = new Color[w * h];
 
     if (bi->biSize < sizeof(BITMAPINFOHEADER)) {
-        this->error_ = "DIB header type not supported";
+        this->error_type_ = kUnsupportedBitmap;
+        this->error_description_ = "DIB header type not supported";
         return false;   // mainly means no BITMAPCOREHEADER support
     }
 
     if (bi->biCompression != BI_RGB) {
-        this->error_ = "Compressed format not supported";
+        this->error_type_ = kUnsupportedBitmap;
+        this->error_description_ = "Compressed format not supported";
         return false;   // unsupported
     }
 
@@ -299,7 +321,8 @@ bool Bitmap::LoadData(char const *data, size_t size)
         break;
 
     default:
-        this->error_ = "Bit depth not supported";
+        this->error_type_ = kUnsupportedBitmap;
+        this->error_description_ = "Color depth not supported";
         return false;
     }
 

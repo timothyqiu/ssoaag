@@ -16,6 +16,13 @@ typedef uint32_t Color; // 0xAARRGGBB format
 class Bitmap
 {
 public:
+    enum Error {
+        kSuccess,
+        kIOError,
+        kInvalidBitmap,
+        kUnsupportedBitmap,
+    };
+
     Bitmap();
     Bitmap(Bitmap const& other);
     Bitmap(Bitmap&& other); // other will go empty
@@ -35,7 +42,7 @@ public:
     int32_t GetWidth()  const { return width_;  }
     int32_t GetHeight() const { return height_; }
 
-    std::string const& GetError() const { return error_; }
+    std::string const& GetError() const { return error_description_; }
 
     static uint8_t GetR(Color c) { return (c >> 16) & 0xFF; }
     static uint8_t GetG(Color c) { return (c >>  8) & 0xFF; }
@@ -50,13 +57,16 @@ public:
 
 private:
     bool LoadData(char const *data, size_t size);
+    bool CheckFormat(char const *data, size_t size);
 
     int32_t width_;
     int32_t height_;
 
     Color *pixels_;
 
-    std::string error_;
+    // TODO: maybe exception?
+    Error error_type_;
+    std::string error_description_;
 };
 
 #endif // BITMAP_H_
