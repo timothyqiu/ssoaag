@@ -4,6 +4,9 @@
 #include <stdint.h>
 #include <string>
 
+struct BITMAPFILEHEADER;
+struct BITMAPINFOHEADER;
+
 /*
  * Bitmap
  * uncompressed 1bpp/4bpp/8bpp/16bpp/24bpp/32bpp bitmap
@@ -58,6 +61,7 @@ public:
 private:
     bool LoadData(char const *data, size_t size);
     bool CheckFormat(char const *data, size_t size);
+    bool LoadUncompressedPixelData(BITMAPFILEHEADER const *bf, BITMAPINFOHEADER const *bi);
 
     int32_t width_;
     int32_t height_;

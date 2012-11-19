@@ -1,4 +1,5 @@
 #include "bitmap.h"
+#include <assert.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -217,9 +218,6 @@ bool Bitmap::LoadData(char const *data, size_t size)
     int w = this->width_  = abs(bi->biWidth );
     int h = this->height_ = abs(bi->biHeight);
 
-    bool flip_x = (w != bi->biWidth );
-    bool flip_y = (h != bi->biHeight);
-
     this->pixels_ = new Color[w * h];
 
     if (bi->biSize < sizeof(BITMAPINFOHEADER)) {
@@ -234,8 +232,13 @@ bool Bitmap::LoadData(char const *data, size_t size)
         return false;   // unsupported
     }
 
-    // for BI_RGB, color table is immediately after the info header
-    auto *palette = reinterpret_cast<uint32_t const *>(data + sizeof(BITMAPFILEHEADER) + bi->biSize);
+    return this->LoadUncompressedPixelData(bf, bi);
+}
+
+bool Bitmap::LoadUncompressedPixelData(BITMAPFILEHEADER const *bf,
+                                       BITMAPINFOHEADER const *bi)
+{
+    assert(bi->biCompression == BI_RGB);
 
     /*
      * BI_RGB Pixel Format (R.G.B.A.X)
@@ -246,8 +249,21 @@ bool Bitmap::LoadData(char const *data, size_t size)
      * 32bpp  8.8.8.0.0  8.8.8.[0-8].[0-8]
      */
 
+    auto w = this->width_;
+    auto h = this->height_;
+
+    // width and height of BI_RGB bitmaps can be negative if flipped
+    bool flip_x = (w != bi->biWidth );
+    bool flip_y = (h != bi->biHeight);
+
+    // for BI_RGB, color table is immediately after the info header
+    auto *palette = reinterpret_cast<uint32_t const *>(
+            reinterpret_cast<uint8_t const *>(bf) +
+            sizeof(BITMAPFILEHEADER) +
+            bi->biSize);
+
     // bitmap pixel data
-    auto *raw = reinterpret_cast<uint8_t const *>(data + bf->bfOffBits);
+    auto *raw = reinterpret_cast<uint8_t const *>(bf) + bf->bfOffBits;
 
     // echo row is rounded up to a multiple of 4 bytes by padding
     auto row_size = (bi->biBitCount * w + 31) / 32 * 4;
